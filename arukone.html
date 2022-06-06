@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Arukone!</title>
+	<script src="https://rp2.studenti.math.hr/~zbujanov/dz3/puzzle.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.js"></script>
+	<link rel="stylesheet" href="stil.css">
+</head>
+<body>
+
+ 	
+	<script>
+		const siva = "#C8C8C8"; 
+		let N = 0;
+		let matrica = [];
+		igra = null;
+
+		function bojaj(id, not_grey){
+			color_to = siva;
+			for(let i = 0; i < igra.color.length; i++){
+				let tid = igra.color[i];
+				if($("#" + tid).is(":checked")){
+					color_to = tid;
+					break;
+				}
+			}	
+
+			let ts = parseInt(id.substr(1));
+			let r = Math.floor(ts / N);
+			if(ts % N != 0)
+				r++;
+			let c = ts - (r - 1) * N;
+			let cell = $("#" + id);
+
+			if(not_grey && matrica[r - 1][c - 1] == -1){
+				cell.css("background-color", color_to);
+				for(let i = 0; i < igra.color.length; i++){
+					if(igra.color[i] == color_to){
+						//console.log(r + " " + c);
+						matrica[r - 1][c - 1] = i;
+						break;
+					}
+				}
+			}else if(!not_grey){
+				//znaci desni je klik
+				matrica[r - 1][c - 1] = -1;
+				cell.css("background-color", siva);
+			}
+		}
+
+		function check_paths(){
+			let complete = 0;
+			for(let col = 0; col < igra.color.length; col++){
+				let vis = [];
+				for(let i = 0; i < N; i++){
+					vis[i] = [];
+					for(let j = 0; j < N; j++){
+						vis[i][j] = false;
+					}
+				}
+				vis[igra.A_row[col] - 1][igra.A_col[col] - 1] = true;
+				que = [];
+				que.push({x : igra.A_row[col] - 1, y : igra.A_col[col] - 1});
+				const dx = [-1, 0, 1, 0];
+				const dy = [0, 1, 0, -1];
+				for(let i = 0; i < que.length; i++){
+					let cur_x = que[i].x, cur_y = que[i].y;
+					for(let dir = 0; dir < 4; dir++){
+						let nx = cur_x + dx[dir];
+						let ny = cur_y + dy[dir];	
+						if(nx < 0 || ny < 0 || nx >= N || ny >= N)
+							continue;
+						if(vis[nx][ny] == true)
+							continue;
+						if(matrica[nx][ny] != col){
+							continue;
+						}
+						vis[nx][ny] = true;
+						que.push({x : nx, y : ny});
+					}
+				}
+
+				let ID = igra.color[col] + "_text";
+				if(!vis[igra.B_row[col] - 1][igra.B_col[col] - 1]){
+					$("#" + ID).css("text-decoration", '');
+					continue;
+				}
+
+				complete++;
+				//console.log("gotova je boja " + igra.color[col]);
+				$("#" + ID).css("text-decoration", "underline");
+			}	
+
+			if(complete == igra.color.length){
+				alert("Čestitamo, slagalica je riješena!");
+			}
+		}
+
+		function akcija(event){
+			switch(event.which){
+		        case 1:
+		        	bojaj(this.id, true);
+		            break;
+		        case 3:
+		            bojaj(this.id, false);
+		            break;
+			}
+
+			check_paths();
+		}	
+
+		function start_new_game(){
+			if(N != 0){
+				//ako se prije igralo, ocistimo stanje
+				//console.log("ima " + $("body").children().length + " elemenata");
+				for(let i = $("body").children().length - 1; i >= 0; i--){
+					let curel = $("body").children().eq(i);
+					if(curel.attr('id') != "start_game"){
+						console.log("brisem " + curel.attr('id'));
+						curel.remove();
+					}else{
+						break;
+					}
+				}
+			}
+			let moguce_ploce = [];
+			let difficulty = $("#difficulty").find(':selected').text();
+			for(let i = 0; i < puzzle.length; i++){
+				if(puzzle[i].name == difficulty){
+					moguce_ploce.push(i);
+				}
+			}
+
+			console.assert(moguce_ploce.length >= 1, "Nema odgovarajuce ploce!");
+			igra = puzzle[moguce_ploce[Math.floor(Math.random() * moguce_ploce.length)]];
+
+
+			let tablica = $('<table id = "ploca" cellspacing = ' + '"0"' +  'cellpadding =' + '"0"' + "></table>");
+			let tmp = igra;
+			let n = tmp.size;
+			N = n;
+			for(let i = 0; i < N; i++){
+				matrica[i] = [];
+			}
+			for(let i = 1; i <= n; i++){
+				let red = $("<tr></tr>");
+				for(let j = 1; j <= n; j++){
+					let cell = "c" + ((i - 1) * n + j);
+					let stupac = $("<td id = " + cell + "></td>");
+					red.append(stupac);
+				}
+
+				tablica.append(red);
+			}
+			
+			
+			$("body").append("<br/></br><br/><br/><br/><br/>");
+			$("body").append(tablica);			
+
+			let forb = [];
+			for(let i = 0; i < tmp.A_row.length; i++){
+				let x = tmp.A_row[i]; let y = tmp.A_col[i];
+				let tko = "c" + ((x - 1) * n + y) + "";
+				let cell = $("#" + tko);
+				//console.log("postavljam " + tko + " na " + tmp.color[i]);
+				$("#" + tko).css("background-color", tmp.color[i]);
+				$("#" + tko).html("*");
+				forb.push({
+					x : x,
+					y : y
+				});
+				matrica[x - 1][y - 1] = i;
+			}  
+
+			for(let i = 0; i < tmp.B_row.length; i++){
+				let x = tmp.B_row[i]; let y = tmp.B_col[i];
+				let tko = "c" + ((x - 1) * n + y) + "";
+				let cell = $("#" + tko);
+				$("#" + tko).css("background-color", tmp.color[i]);
+				$("#" + tko).html("*");
+				forb.push({
+					x : x,
+					y : y
+				});
+				matrica[x - 1][y - 1] = i;
+			}
+
+			for(let x = 1; x <= n; x++){
+				for(let y = 1; y <= n; y++){
+					let tko = "c" + ((x - 1) * n + y) + "";
+					let cell = $("#" + tko);
+					cell.on("contextmenu", function(){return false;});
+					let dozvoli = true;
+					for(let k = 0; k < forb.length; k++){
+						if(forb[k].x == x && forb[k].y == y){
+							dozvoli = false; break;
+						}
+					}
+					if(dozvoli == false){
+						continue;
+					}
+
+					cell.on("mousedown", akcija);
+					cell.css("background-color", siva);
+					matrica[x - 1][y - 1] = -1;
+				}
+			}
+
+			let lab = $('<label id = "labid">' + 'Odaberi boju za igranje: </label>');
+
+			$("body").append(lab);
+			
+			for(let i = 0; i < tmp.color.length; i++){
+				let rad_btn = $('<input type = "radio" id = "' + tmp.color[i] + '"' + 'name = "cur_color" value = "' + tmp.color[i] + '">');
+				lab.append(rad_btn);
+				if(i == 0){
+					//osiguram da je bar jedna boja odabrana
+					rad_btn.attr("checked", "true");
+				}
+				let t_id = tmp.color[i] + "_text";
+				//console.log("id je " + t_id);
+				let opis = $('<label id = "' + t_id + '"' + 'for = "' + tmp.color[i] + '"' + '>' + tmp.color[i] + '</label>');
+				lab.append(opis);
+			}
+
+		}
+
+		$(document).ready(function(){
+			let izbornik = $('<select name = "difficulty" id = "difficulty"></select>');
+			izbornik.append('<option value = "Easy">Easy</option>');
+			izbornik.append('<option value = "Medium">Medium</option>');
+			izbornik.append('<option value = "Hard">Hard</option>');
+			$("body").append(izbornik);
+			$("body").append('<input type = "button" id = "start_game" value = "Zapocni igru!"/>');
+			//console.log("na pocetku je length " + $("body").children().length); 
+			let btn_start = document.getElementById("start_game");
+			btn_start.onclick = function(){
+				start_new_game();
+			};
+
+		});
+
+
+	</script>
+
+
+</body>
+</html>
